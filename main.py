@@ -121,7 +121,7 @@ async def new_user(message: Message):
     await send_message(message, 'language_choose', RUS)
 
 
-@dp.message(lambda x: x.text == '/start')
+@dp.message(lambda message: message.text == '/start')
 async def start_handler(message: Message):
     user = users.get_user(message.chat.id)
     language = user.get_language()
@@ -129,7 +129,7 @@ async def start_handler(message: Message):
 
 
 @dp.message(lambda x: x.text == '/language')
-async def start_handler(message: Message):
+async def language_handler(message: Message):
     user = users.get_user(message.chat.id)
     language = user.get_language()
     await send_message(message, 'language_choose', language)

@@ -20,6 +20,11 @@ ENG = 1
 class LangCb(CallbackData, prefix='langChange'):
     value: int
 
+
+class FaqCb(CallbackData, prefix='faqCb'):
+    num_button: int
+
+
 texts = {'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
                       ENG: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot"},
          'start': {RUS: 'Для поиска лекарства введите /search\nдля проверки взаимолействия введите /interaction',
@@ -31,7 +36,9 @@ texts = {'new_user': {RUS: "Мы рады видеть вас в нашем бо
          'search_start': {RUS: 'Введите название или часть названия препарата, бот вернет вам список результатов',
                           ENG: 'Send drug title or part of the title, bot will return you list of results'},
          'search_result': {RUS: 'Результат поиска:\n',
-                           ENG: 'Search result:\n'}
+                           ENG: 'Search result:\n'},
+         'faq_list': {RUS: 'Частые вопросы:',
+                      ENG: 'Frequently asked questions:'}
          }
 
 keyboards = {
@@ -51,6 +58,14 @@ keyboards = {
 conn = sqlite3.connect('main.db')
 conn.isolation_level = None
 cursor = sqlite3.Cursor(conn)
+
+
+async def faq_kb_gen():
+    kb = InlineKeyboardBuilder()
+    for i in range(16):
+        kb.button(text=f'{i + 1}', callback_data=FaqCb(num_button=i+1))
+    kb.adjust(*(4, 4, 4))
+    return kb.as_markup()
 
 
 class User:
@@ -93,9 +108,9 @@ class Users:
 users = Users()
 
 
-async def send_message(message: Message, code: str, lang: int, markup=None):
-    if markup is not None:
-        await message.answer(text=texts[code][lang], reply_markup=markup)
+async def send_message(message: Message, code: str, lang: int, keyboard=None):
+    if keyboard is not None:
+        await message.answer(text=texts[code][lang], reply_markup=keyboard)
 
     elif code in keyboards.keys():
         await message.answer(text=texts[code][lang], reply_markup=keyboards[code][lang])
@@ -111,6 +126,15 @@ async def change_language(callback: CallbackQuery, callback_data: CallbackData):
     user.set_language(lang)
     await send_message(callback.message, 'language_changed', lang)
     await send_message(callback.message, 'start', lang)
+
+
+@dp.callback_query(FaqCb.filter())
+async def faq_choose(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    num_button = callback_data.num_button
+    user = users.get_user(tg_id)
+    kb = callback.message.reply_markup
+    await callback.message.edit_text(text=f'{num_button}', reply_markup=kb)
 
 
 @dp.message(lambda x: not users.check_existence(x.chat.id))
@@ -134,6 +158,13 @@ async def language_handler(message: Message):
     language = user.get_language()
     await send_message(message, 'language_choose', language)
 
+
+@dp.message(lambda x: x.text == '/faq')
+async def faq_handler(message: Message):
+    user = users.get_user(message.chat.id)
+    language = user.get_language()
+    kb = await faq_kb_gen()
+    await send_message(message, 'faq_list', language, kb)
 
 async def main():
     await dp.start_polling(bot)

@@ -20,6 +20,16 @@ def load_questions():
     texts['faq_list'][RUS] = texts['faq_list'][RUS].format(questions=ru_text)
     texts['faq_list'][ENG] = texts['faq_list'][ENG].format(questions=en_text)
 
+dorms = {}
+
+def load_dorms():
+    for dorm in cursor.execute(GET_DORMS).fetchall():
+        dorms[dorm[0]] = Dorm(*dorm)
+    ru_text = '\n'.join(map(lambda dorm: f'{dorm.ru_name}', dorms.values()))
+    en_text = '\n'.join(map(lambda dorm: f'{dorm.eng_name}', dorms.values()))
+    texts['dorm_list'][RUS] = texts['dorm_list'][RUS].format(dorms=ru_text)
+    texts['dorm_list'][ENG] = texts['dorm_list'][ENG].format(dorms=en_text)
+
 
 async def send_message(message: Message, code: str, lang: int, keyboard=None):
     if keyboard is not None:
@@ -102,6 +112,7 @@ async def dorm_handler(message: Message):
 
 async def main():
     load_questions()
+    load_dorms()
     await dp.start_polling(bot)
 
 

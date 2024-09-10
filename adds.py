@@ -7,6 +7,7 @@ import sqlite3
 import asyncio
 
 GET_QUESTIONS = 'SELECT ROWID, ru_text, en_text, ru_answer, en_answer FROM questions'
+GET_DORMS = 'SELECT ROWID, ru_name, eng_name FROM dorms'
 DEFAULT_STATE = 0
 SEARCH_STATE = 1
 INTERACTION_STATE = 2
@@ -119,6 +120,14 @@ class Question:
         self.en_text = en_text
         self.ru_answer = ru_answer
         self.en_answer = en_answer
+
+
+class Dorm:
+    def __init__(self, id, ru_name, eng_name):
+        self.id = id
+        self.ru_name = ru_name
+        self.eng_name = eng_name
+
 
 
 async def faq_kb_gen(length:int, go_back: bool = False):

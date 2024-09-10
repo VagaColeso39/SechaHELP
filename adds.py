@@ -17,10 +17,11 @@ ENG = 1
 class LangCb(CallbackData, prefix='langChange'):
     value: int
 
-
 class FaqCb(CallbackData, prefix='faqCb'):
     num_button: int
 
+class DormCb(CallbackData, prefix='dormCb'):
+    dorms_num: int
 
 texts = {'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
                       ENG: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot"},
@@ -35,7 +36,9 @@ texts = {'new_user': {RUS: "Мы рады видеть вас в нашем бо
          'search_result': {RUS: 'Результат поиска:\n',
                            ENG: 'Search result:\n'},
          'faq_list': {RUS: 'Частые вопросы:\n{questions}',
-                      ENG: 'Frequently asked questions:\n{questions}'}
+                      ENG: 'Frequently asked questions:\n{questions}'},
+         'dorm_list': {RUS: 'Список общежитий:\n{dorms}',
+                      ENG: 'List of dorms:\n{dorms}'}
          }
 
 keyboards = {
@@ -50,7 +53,26 @@ keyboards = {
               InlineKeyboardButton(text='English', callback_data=LangCb(value=ENG).pack())]]),
         ENG: InlineKeyboardMarkup(inline_keyboard=[
              [InlineKeyboardButton(text='Русский', callback_data=LangCb(value=RUS).pack()),
-              InlineKeyboardButton(text='English', callback_data=LangCb(value=ENG).pack())]])}}
+              InlineKeyboardButton(text='English', callback_data=LangCb(value=ENG).pack())]])},
+
+    'dorm_list': {
+        RUS: InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='1 общежитие', callback_data=DormCb(dorms_num=1).pack()),
+             InlineKeyboardButton(text='2 общежитие', callback_data=DormCb(dorms_num=2).pack()),
+             InlineKeyboardButton(text='3 общежитие', callback_data=DormCb(dorms_num=3).pack())],
+            [InlineKeyboardButton(text='4 общежитие', callback_data=DormCb(dorms_num=4).pack()),
+             InlineKeyboardButton(text='5 общежитие', callback_data=DormCb(dorms_num=5).pack()),
+             InlineKeyboardButton(text='6 общежитие', callback_data=DormCb(dorms_num=6).pack())]
+             ]),
+        ENG: InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='1 dorm', callback_data=DormCb(dorms_num=1).pack()),
+            InlineKeyboardButton(text='2 dorm', callback_data=DormCb(dorms_num=2).pack()),
+            InlineKeyboardButton(text='3 dorm', callback_data=DormCb(dorms_num=3).pack())],
+            [InlineKeyboardButton(text='4 dorm', callback_data=DormCb(dorms_num=4).pack()),
+            InlineKeyboardButton(text='5 dorm', callback_data=DormCb(dorms_num=5).pack()),
+            InlineKeyboardButton(text='6 dorm', callback_data=DormCb(dorms_num=6).pack())
+            ]])}
+}
 
 
 class User:

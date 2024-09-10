@@ -40,6 +40,13 @@ async def change_language(callback: CallbackQuery, callback_data: CallbackData):
     await send_message(callback.message, 'start', lang)
 
 
+@dp.callback_query(DormCb.filter())
+async def change_language(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    dorm = callback_data.value
+    await send_message(callback.message, 'language_changed', dorm)
+
+
 @dp.callback_query(FaqCb.filter())
 async def faq_choose(callback: CallbackQuery, callback_data: CallbackData):
     tg_id = callback.message.chat.id
@@ -87,6 +94,11 @@ async def faq_handler(message: Message):
     kb = await faq_kb_gen(len(questions))
     await send_message(message, 'faq_list', language, kb)
 
+@dp.message(lambda x: x.text == '/dorm')
+async def dorm_handler(message: Message):
+    user = users.get_user(message.chat.id)
+    language = user.get_language()
+    await send_message(message, 'dorm_list', language)
 
 async def main():
     load_questions()

@@ -1,6 +1,6 @@
 from adds import *
 
-TOKEN = '7263956610:AAEObiOp2c0bo0KmbrFZRznjMKzRG66Yn5o'
+TOKEN = '7318423417:AAHlLQ2Tnns1s02jHGs2eSFwPKAArBogZuI'
 bot = Bot(TOKEN)
 dp = Dispatcher()
 
@@ -27,8 +27,8 @@ def load_dorms():
         dorms[dorm[0]] = Dorm(*dorm)
     ru_text = '\n'.join(map(lambda dorm: f'{dorm.ru_name}', dorms.values()))
     en_text = '\n'.join(map(lambda dorm: f'{dorm.eng_name}', dorms.values()))
-    texts['dorm_list'][RUS] = texts['dorm_list'][RUS].format(dorms=ru_text)
-    texts['dorm_list'][ENG] = texts['dorm_list'][ENG].format(dorms=en_text)
+    texts['dorms_list'][RUS] = texts['dorms_list'][RUS].format(dorms=ru_text)
+    texts['dorms_list'][ENG] = texts['dorms_list'][ENG].format(dorms=en_text)
 
 
 async def send_message(message: Message, code: str, lang: int, keyboard=None):
@@ -53,8 +53,19 @@ async def change_language(callback: CallbackQuery, callback_data: CallbackData):
 @dp.callback_query(DormCb.filter())
 async def change_language(callback: CallbackQuery, callback_data: CallbackData):
     tg_id = callback.message.chat.id
-    dorm = callback_data.value
-    await send_message(callback.message, 'language_changed', dorm)
+    dorm_id = callback_data.dorms_num
+    language = users.get_user(tg_id).get_language()
+
+    if dorm_id == -1:
+        kb = keyboards['dorms_list'][language]
+        await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
+        return
+    kb = keyboards['dorm_info'][language]
+    if language == RUS:
+        await callback.message.edit_text(text=dorms[dorm_id].ru_description, reply_markup=kb)
+    else:
+        await callback.message.edit_text(text=dorms[dorm_id].en_description, reply_markup=kb)
+
 
 
 @dp.callback_query(FaqCb.filter())
@@ -104,11 +115,11 @@ async def faq_handler(message: Message):
     kb = await faq_kb_gen(len(questions))
     await send_message(message, 'faq_list', language, kb)
 
-@dp.message(lambda x: x.text == '/dorm')
+@dp.message(lambda x: x.text == '/dorms')
 async def dorm_handler(message: Message):
     user = users.get_user(message.chat.id)
     language = user.get_language()
-    await send_message(message, 'dorm_list', language)
+    await send_message(message, 'dorms_list', language)
 
 async def main():
     load_questions()

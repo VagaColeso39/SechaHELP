@@ -20,6 +20,7 @@ def load_questions():
     texts['faq_list'][RUS] = texts['faq_list'][RUS].format(questions=ru_text)
     texts['faq_list'][ENG] = texts['faq_list'][ENG].format(questions=en_text)
 
+
 dorms = {}
 
 def load_dorms():
@@ -31,6 +32,21 @@ def load_dorms():
     texts['dorms_list'][ENG] = texts['dorms_list'][ENG].format(dorms=en_text)
 
 
+feedbacks_by_time = {}
+feedbacks_by_rate = {}
+reviews = []
+res = []
+
+def load_feedbacks():
+    global res, feedbacks_by_rate, feedbacks_by_time
+    for review in cursor.execute(GET_FEEDBACK).fetchall():
+        feedbacks_by_time[review[0]] = Feedback(*review)
+    feedbacks_by_rate = list(feedbacks_by_time.values())
+    feedbacks_by_rate.sort(key=lambda feedback: feedback.grade)
+    feedbacks_by_rate = dict(zip(range(1, len(feedbacks_by_rate)+1), feedbacks_by_rate))
+    res = [feedbacks_by_time, feedbacks_by_rate]
+
+
 async def send_message(message: Message, code: str, lang: int, keyboard=None):
     if keyboard is not None:
         await message.answer(text=texts[code][lang], reply_markup=keyboard)
@@ -38,6 +54,7 @@ async def send_message(message: Message, code: str, lang: int, keyboard=None):
         await message.answer(text=texts[code][lang], reply_markup=keyboards[code][lang])
     else:
         await message.answer(text=texts[code][lang])
+
 
 
 @dp.callback_query(LangCb.filter())
@@ -51,7 +68,7 @@ async def change_language(callback: CallbackQuery, callback_data: CallbackData):
 
 
 @dp.callback_query(DormCb.filter())
-async def change_language(callback: CallbackQuery, callback_data: CallbackData):
+async def change_dorm(callback: CallbackQuery, callback_data: CallbackData):
     tg_id = callback.message.chat.id
     dorm_id = callback_data.dorms_num
     language = users.get_user(tg_id).get_language()
@@ -65,6 +82,130 @@ async def change_language(callback: CallbackQuery, callback_data: CallbackData):
         await callback.message.edit_text(text=dorms[dorm_id].ru_description, reply_markup=kb)
     else:
         await callback.message.edit_text(text=dorms[dorm_id].en_description, reply_markup=kb)
+
+
+@dp.callback_query(DormInfoCb.filter())
+async def choose_dorm_command(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    command  = callback_data.command
+    language = users.get_user(tg_id).get_language()
+
+    if command == "review":
+        kb = keyboards['dorm_reviews_sort'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
+
+    if command == "send_review":
+        kb = keyboards['dorm_reviews_sort'][language]
+        await callback.message.edit_text(text=texts['sent_feedback'][language], reply_markup=kb)
+
+    if command == "back":
+        kb = keyboards['dorms_list'][language]
+        await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
+
+
+@dp.callback_query(ReviewsCb.filter())
+async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    command  = callback_data.command
+    language = users.get_user(tg_id).get_language()
+    sorter_parameter = users.get_user(tg_id).get_sorter_parameter()
+    feedback_number = users.get_user(tg_id).get_feedback_number()
+    user = users.get_user(tg_id)
+
+    if sorter_parameter in [0, 1]:
+        if command == "next":
+            if feedback_number == len(feedbacks_by_rate):
+                user.set_feedback_number(1)
+                feedback_number = 1
+            else:
+                feedback_number += 1
+                user.set_feedback_number(feedback_number)
+            kb = keyboards['dorm_reviews'][language]
+            await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                             reply_markup=kb)
+
+        elif command == "last":
+            if feedback_number == 1:
+                user.set_feedback_number(len(feedbacks_by_rate))
+                feedback_number = len(feedbacks_by_rate)
+            else:
+                feedback_number -= 1
+                user.set_feedback_number(feedback_number)
+            kb = keyboards['dorm_reviews'][language]
+            await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                             reply_markup=kb)
+    else:
+        if command == "last":
+            if feedback_number == len(feedbacks_by_rate):
+                user.set_feedback_number(1)
+                feedback_number = 1
+            else:
+                feedback_number += 1
+                user.set_feedback_number(feedback_number)
+            kb = keyboards['dorm_reviews'][language]
+            await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter-2][feedback_number].ru_text),
+                                             reply_markup=kb)
+
+        elif command == "next":
+            if feedback_number == 1:
+                user.set_feedback_number(len(feedbacks_by_rate))
+                feedback_number = len(feedbacks_by_rate)
+            else:
+                feedback_number -= 1
+                user.set_feedback_number(feedback_number)
+            kb = keyboards['dorm_reviews'][language]
+            await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter-2][feedback_number].ru_text),
+                                             reply_markup=kb)
+
+    if command == "back":
+        kb = keyboards['dorm_reviews_sort'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
+
+
+@dp.callback_query(ReviewsSortCb.filter())
+async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    command  = callback_data.command
+    language = users.get_user(tg_id).get_language()
+
+    if command == "new":
+        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
+        users.get_user(tg_id).set_sorter_parameter(2)
+        sorter_parameter = 2
+        feedback_number = len(feedbacks_by_time)
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter-2][feedback_number].ru_text), reply_markup=kb)
+
+    if command == "old":
+        users.get_user(tg_id).set_feedback_number(1)
+        users.get_user(tg_id).set_sorter_parameter(0)
+        sorter_parameter = 0
+        feedback_number = 1
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "negative":
+        users.get_user(tg_id).set_feedback_number(1)
+        users.get_user(tg_id).set_sorter_parameter(1)
+        sorter_parameter = 1
+        feedback_number = 1
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "positive":
+        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
+        users.get_user(tg_id).set_sorter_parameter(3)
+        sorter_parameter = 3
+        feedback_number = len(feedbacks_by_time)
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter - 2][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "back":
+        kb = keyboards['dorms_list'][language]
+        await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
 
 
 
@@ -124,6 +265,7 @@ async def dorm_handler(message: Message):
 async def main():
     load_questions()
     load_dorms()
+    load_feedbacks()
     await dp.start_polling(bot)
 
 

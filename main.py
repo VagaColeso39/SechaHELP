@@ -73,11 +73,13 @@ async def change_dorm(callback: CallbackQuery, callback_data: CallbackData):
     dorm_id = callback_data.dorms_num
     language = users.get_user(tg_id).get_language()
 
+
     if dorm_id == -1:
         kb = keyboards['dorms_list'][language]
         await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
         return
     kb = keyboards['dorm_info'][language]
+    users.get_user(tg_id).set_dorm_number(dorm_id)
     if language == RUS:
         await callback.message.edit_text(text=dorms[dorm_id].ru_description, reply_markup=kb)
     else:
@@ -101,6 +103,56 @@ async def choose_dorm_command(callback: CallbackQuery, callback_data: CallbackDa
     if command == "back":
         kb = keyboards['dorms_list'][language]
         await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
+
+
+@dp.callback_query(ReviewsSortCb.filter())
+async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    command  = callback_data.command
+    language = users.get_user(tg_id).get_language()
+    dorm_number = users.get_user(tg_id).get_dorm_number()
+
+    if command == "new":
+        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
+        users.get_user(tg_id).set_sorter_parameter(2)
+        sorter_parameter = 2
+        feedback_number = len(feedbacks_by_time)
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter-2][feedback_number].ru_text), reply_markup=kb)
+
+    if command == "old":
+        users.get_user(tg_id).set_feedback_number(1)
+        users.get_user(tg_id).set_sorter_parameter(0)
+        sorter_parameter = 0
+        feedback_number = 1
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "negative":
+        users.get_user(tg_id).set_feedback_number(1)
+        users.get_user(tg_id).set_sorter_parameter(1)
+        sorter_parameter = 1
+        feedback_number = 1
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "positive":
+        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
+        users.get_user(tg_id).set_sorter_parameter(3)
+        sorter_parameter = 3
+        feedback_number = len(feedbacks_by_time)
+        kb = keyboards['dorm_reviews'][language]
+        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter - 2][feedback_number].ru_text),
+                                         reply_markup=kb)
+
+    if command == "back":
+        kb = keyboards['dorm_info'][language]
+        if language == RUS:
+            await callback.message.edit_text(text=dorms[dorm_number].ru_description, reply_markup=kb)
+        else:
+            await callback.message.edit_text(text=dorms[dorm_number].en_description, reply_markup=kb)
 
 
 @dp.callback_query(ReviewsCb.filter())
@@ -160,54 +212,6 @@ async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData
     if command == "back":
         kb = keyboards['dorm_reviews_sort'][language]
         await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
-
-
-@dp.callback_query(ReviewsSortCb.filter())
-async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
-    tg_id = callback.message.chat.id
-    command  = callback_data.command
-    language = users.get_user(tg_id).get_language()
-
-    if command == "new":
-        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
-        users.get_user(tg_id).set_sorter_parameter(2)
-        sorter_parameter = 2
-        feedback_number = len(feedbacks_by_time)
-        kb = keyboards['dorm_reviews'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter-2][feedback_number].ru_text), reply_markup=kb)
-
-    if command == "old":
-        users.get_user(tg_id).set_feedback_number(1)
-        users.get_user(tg_id).set_sorter_parameter(0)
-        sorter_parameter = 0
-        feedback_number = 1
-        kb = keyboards['dorm_reviews'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
-                                         reply_markup=kb)
-
-    if command == "negative":
-        users.get_user(tg_id).set_feedback_number(1)
-        users.get_user(tg_id).set_sorter_parameter(1)
-        sorter_parameter = 1
-        feedback_number = 1
-        kb = keyboards['dorm_reviews'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter][feedback_number].ru_text),
-                                         reply_markup=kb)
-
-    if command == "positive":
-        users.get_user(tg_id).set_feedback_number(len(feedbacks_by_time))
-        users.get_user(tg_id).set_sorter_parameter(3)
-        sorter_parameter = 3
-        feedback_number = len(feedbacks_by_time)
-        kb = keyboards['dorm_reviews'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews'][RUS].format(review=res[sorter_parameter - 2][feedback_number].ru_text),
-                                         reply_markup=kb)
-
-    if command == "back":
-        kb = keyboards['dorms_list'][language]
-        await callback.message.edit_text(text=texts['dorms_list'][language], reply_markup=kb)
-
-
 
 @dp.callback_query(FaqCb.filter())
 async def faq_choose(callback: CallbackQuery, callback_data: CallbackData):

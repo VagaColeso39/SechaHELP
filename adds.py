@@ -40,7 +40,8 @@ class ReviewsSortCb(CallbackData, prefix='reviewsSortCb'):
 class ReviewsCb(CallbackData, prefix='reviewsCb'):
     command: str
 
-texts = {'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
+texts = {
+         'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
                       ENG: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot"},
          'start': {RUS: 'Чтобы открыть список частых вопросов введите /faq\nдля получения информации по общежитиям введите /dorms',
                    ENG: "To open frequently asked questions list type in /faq\nto get the info about the dorms type in /dorms"},
@@ -143,12 +144,14 @@ keyboards = {
 
 
 class User:
-    def __init__(self, tg_id: int, state: int = DEFAULT_STATE, language: int = RUS, feedback_number: int = DEFAULT_NUMBER_FEEDBACK, type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT):
+    def __init__(self, tg_id: int, state: int = DEFAULT_STATE, language: int = RUS, feedback_number:
+                    int = DEFAULT_NUMBER_FEEDBACK, type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT, selected_dorm: int = 1):
         self.id = tg_id
         self.__state = state
         self.__language = language
         self.__feedback_number = feedback_number
         self.__type_sort_feedback = type_sort_feedback
+        self.__selected_dorm = selected_dorm
 
     def set_state(self, state: int):
         self.__state = state
@@ -173,6 +176,12 @@ class User:
 
     def get_language(self):
         return self.__language
+
+    def set_dorm_number(self, selected_dorm: int):
+        self.__selected_dorm = selected_dorm
+
+    def get_dorm_number(self):
+        return self.__selected_dorm
 
 
 class Users:

@@ -11,10 +11,12 @@ TRANSLATE_LINK_RU_EN = 'https://ftapi.pythonanywhere.com/translate?&dl=en&text='
 TRANSLATE_LINK_EN_RU = 'https://ftapi.pythonanywhere.com/translate?&dl=ru&text='
 
 GET_QUESTIONS = 'SELECT ROWID, ru_text, en_text, ru_answer, en_answer FROM questions'
+GET_USERS = "SELECT tg_id, language, verified FROM users"
 GET_DORMS = 'SELECT ROWID, ru_name, eng_name, ru_description, en_description FROM dorms'
 GET_FEEDBACK = 'SELECT ROWID, id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id FROM feedbacks'
 CREATE_FEEDBACK = 'INSERT INTO feedbacks (id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-
+CREATE_USER = "INSERT INTO users (tg_id, language) VALUES (?, ?)"
+UPDATE_LANGUAGE = "UPDATE users SET language=? WHERE tg_id=?"
 DEFAULT_STATE = 0
 SEARCH_STATE = 1
 INTERACTION_STATE = 2
@@ -75,8 +77,8 @@ texts = {
     'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
                  ENG: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot"},
     'start': {
-        RUS: 'Чтобы открыть список частых вопросов введите /faq\nдля получения информации по общежитиям введите /dorms',
-        ENG: "To open frequently asked questions list type in /faq\nto get the info about the dorms type in /dorms"},
+        RUS: 'Чтобы открыть список частых вопросов введите /faq\nдля получения информации по общежитиям введите /dorms\n для смены языка введите /language',
+        ENG: "To open frequently asked questions list type in /faq\nto get the info about the dorms type in /dorms\n to change language type in /language"},
     'language_choose': {RUS: 'Выберите ваш язык / Choose your language',
                         ENG: 'Выберите ваш язык / Choose your language'},
     'language_changed': {RUS: "Язык успешно изменен",
@@ -121,15 +123,16 @@ texts = {
     'feedback_confirmed': {
         RUS: "Ваш отзыв отправлен на модерацию,в течение 1-3 рабочих дней ожидайте сообщение от этого бота с дальнейшей информацией по отзыву",
         ENG: "Your feedback have been sent to moderation, wait for the message with additional information from this bot in 1-3 business days"},
-    'dorm_reviews': {RUS: '{review}',
-                     ENG: '{review}'}
+    'dorm_reviews': {RUS: '◆ Транспортная доступность: {transport}/10\n◆ Персонал: {staff}/10\n◆ Личные комнаты: {private}/10\n◆ Общие зоны: {public}/10\n◆ Инфраструктура: {infrastructure}/10\n◆ Среднее: {average}/10\n\n{review}',
+                     ENG: '◆ Transport accessibility: {transport}/10\n◆ Staff: {staff}/10\n◆ Private rooms: {private}/10\n◆ Public rooms: {public}/10\n◆ Infrastructure: {infrastructure}/10\n◆ Average: {average}/10\n\n{review}'}
 }
+
 
 keyboards = {
     'start': {
-        RUS: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq')]],
+        RUS: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
                                  resize_keyboard=True),
-        ENG: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq')]],
+        ENG: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
                                  resize_keyboard=True)},
     'language_choose': {
         RUS: InlineKeyboardMarkup(inline_keyboard=[
@@ -213,8 +216,8 @@ keyboards = {
 
 
 class User:
-    def __init__(self, tg_id: int, state: int = DEFAULT_STATE, language: int = RUS, feedback_number:
-    int = DEFAULT_NUMBER_FEEDBACK, type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT, selected_dorm: int = 1, verified:bool=False):
+    def __init__(self, tg_id: int, language: int = RUS, verified:bool=False, state: int = DEFAULT_STATE, feedback_number:
+    int = DEFAULT_NUMBER_FEEDBACK, type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT, selected_dorm: int = 1):
         self.id = tg_id
         self.__state = state
         self.__language = language

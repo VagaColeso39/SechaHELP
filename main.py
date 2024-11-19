@@ -1,6 +1,6 @@
 from adds import *
 
-TOKEN = '7318423417:AAHlLQ2Tnns1s02jHGs2eSFwPKAArBogZuI'
+TOKEN = ''
 bot = Bot(TOKEN)
 dp = Dispatcher()
 

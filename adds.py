@@ -21,6 +21,7 @@ DEFAULT_STATE = 0
 SEARCH_STATE = 1
 INTERACTION_STATE = 2
 FEEDBACK_WRITING_STATE = 3
+AUTHOR_ASK_STATE = 4
 RUS = 0
 ENG = 1
 DEFAULT_NUMBER_FEEDBACK = 1
@@ -124,7 +125,10 @@ texts = {
         RUS: "Ваш отзыв отправлен на модерацию,в течение 1-3 рабочих дней ожидайте сообщение от этого бота с дальнейшей информацией по отзыву",
         ENG: "Your feedback have been sent to moderation, wait for the message with additional information from this bot in 1-3 business days"},
     'dorm_reviews': {RUS: '◆ Транспортная доступность: {transport}/10\n◆ Персонал: {staff}/10\n◆ Личные комнаты: {private}/10\n◆ Общие зоны: {public}/10\n◆ Инфраструктура: {infrastructure}/10\n◆ Среднее: {average}/10\n\n{review}',
-                     ENG: '◆ Transport accessibility: {transport}/10\n◆ Staff: {staff}/10\n◆ Private rooms: {private}/10\n◆ Public rooms: {public}/10\n◆ Infrastructure: {infrastructure}/10\n◆ Average: {average}/10\n\n{review}'}
+                     ENG: '◆ Transport accessibility: {transport}/10\n◆ Staff: {staff}/10\n◆ Private rooms: {private}/10\n◆ Public rooms: {public}/10\n◆ Infrastructure: {infrastructure}/10\n◆ Average: {average}/10\n\n{review}'},
+
+    'ask_author': {RUS: 'Напишите вопрос автору отзыва, после модерации текста он получит возможность ответить вам',
+                   ENG: "Write question to the feedback author, after text moderation he will be able to answer you"}
 }
 
 
@@ -196,11 +200,13 @@ keyboards = {
         RUS: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='следующий отзыв', callback_data=ReviewsCb(command="next").pack()),
              InlineKeyboardButton(text='предыдущий отзыв', callback_data=ReviewsCb(command="last").pack()),
+             InlineKeyboardButton(text='обратная связь', callback_data=ReviewsCb(command='ask').pack()),
              InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]
         ]),
         ENG: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='next review', callback_data=ReviewsCb(command="next").pack()),
              InlineKeyboardButton(text='previous review', callback_data=ReviewsCb(command="last").pack()),
+             InlineKeyboardButton(text='contact author', callback_data=ReviewsCb(command='ask').pack()),
              InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]
         ])
     },

@@ -1,7 +1,7 @@
 from adds import *
 
 TOKEN = ''
-bot = Bot(TOKEN)
+bot = ''
 dp = Dispatcher()
 
 questions = {}
@@ -11,6 +11,13 @@ dorms = {}
 conn = sqlite3.connect('main.db')
 conn.isolation_level = None
 cursor = sqlite3.Cursor(conn)
+
+
+def load_token():
+    global TOKEN, bot
+    with open('TOKEN.txt', 'r') as f:
+        TOKEN = f.readline().replace('\n', '')
+        bot = Bot(TOKEN)
 
 
 def load_users():
@@ -48,7 +55,7 @@ def load_feedbacks():
         feedbacks_by_time[review[0]] = Feedback(*review)
     feedbacks_by_rate = list(feedbacks_by_time.values())
     feedbacks_by_rate.sort(key=lambda feedback: feedback.grade_avg)
-    feedbacks_by_rate = dict(zip(range(1, len(feedbacks_by_rate)+1), feedbacks_by_rate))
+    feedbacks_by_rate = dict(zip(range(1, len(feedbacks_by_rate) + 1), feedbacks_by_rate))
     res = [feedbacks_by_time, feedbacks_by_rate]
 
 
@@ -125,8 +132,12 @@ async def rate_filter(callback: CallbackQuery, callback_data: CallbackData):
         rates = user.get_rate()
         avg = sum(rates.values()) / len(rates.values())
         user.set_rate(avg, RATE_AVG)
-        await callback.message.edit_text(texts['rate_write_text'][language].format(r1=rates[RATE_TRANSPORT], r2=rates[RATE_STAFF], r3=rates[RATE_PRIVATE], r4=rates[RATE_PUBLIC], r5=rates[RATE_INFRASTRUCTURE], avg=avg))
+        await callback.message.edit_text(
+            texts['rate_write_text'][language].format(r1=rates[RATE_TRANSPORT], r2=rates[RATE_STAFF],
+                                                      r3=rates[RATE_PRIVATE], r4=rates[RATE_PUBLIC],
+                                                      r5=rates[RATE_INFRASTRUCTURE], avg=avg))
         user.set_state(FEEDBACK_WRITING_STATE)
+
 
 @dp.callback_query(ReviewsSortCb.filter())
 async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
@@ -158,19 +169,37 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
     feedback = res[sorter_parameter][feedback_number]
 
     if language == RUS:
-        await callback.message.edit_text(
-            text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
-                                                        staff=feedback.grade_staff, private=feedback.grade_private,
-                                                        public=feedback.grade_public,
-                                                        infrastructure=feedback.grade_infrastructure,
-                                                        average=feedback.grade_avg), reply_markup=kb)
+        if language != feedback.language:
+            await callback.message.edit_text(
+                text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
+                                                            staff=feedback.grade_staff, private=feedback.grade_private,
+                                                            public=feedback.grade_public,
+                                                            infrastructure=feedback.grade_infrastructure,
+                                                            average=feedback.grade_avg) + "\n (Отзыв переведен автоматически и может содержать ошибки)",
+                reply_markup=kb)
+        else:
+            await callback.message.edit_text(
+                text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
+                                                            staff=feedback.grade_staff, private=feedback.grade_private,
+                                                            public=feedback.grade_public,
+                                                            infrastructure=feedback.grade_infrastructure,
+                                                            average=feedback.grade_avg), reply_markup=kb)
     else:
-        await callback.message.edit_text(
-            text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
-                                                        staff=feedback.grade_staff, private=feedback.grade_private,
-                                                        public=feedback.grade_public,
-                                                        infrastructure=feedback.grade_infrastructure,
-                                                        average=feedback.grade_avg), reply_markup=kb)
+        if language != feedback.language:
+            await callback.message.edit_text(
+                text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
+                                                            staff=feedback.grade_staff, private=feedback.grade_private,
+                                                            public=feedback.grade_public,
+                                                            infrastructure=feedback.grade_infrastructure,
+                                                            average=feedback.grade_avg) + "\n (Feeadback was automatically translated and may contain mistakes)",
+                reply_markup=kb)
+        else:
+            await callback.message.edit_text(
+                text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
+                                                            staff=feedback.grade_staff, private=feedback.grade_private,
+                                                            public=feedback.grade_public,
+                                                            infrastructure=feedback.grade_infrastructure,
+                                                            average=feedback.grade_avg), reply_markup=kb)
 
     if command == "back":
         kb = keyboards['dorm_info'][language]
@@ -217,7 +246,7 @@ async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData
             else:
                 feedback_number -= 1
 
-        feedback = res[sorter_parameter-2][feedback_number]
+        feedback = res[sorter_parameter - 2][feedback_number]
 
     user.set_feedback_number(feedback_number)
     kb = keyboards['dorm_reviews'][language]
@@ -240,6 +269,9 @@ async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData
     elif command == "back":
         kb = keyboards['dorm_reviews_sort'][language]
         await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
+    elif command == 'ask':
+        await callback.message.edit_text(text=texts['ask_author'][language])
+        user.set_state(AUTHOR_ASK_STATE)
 
 
 @dp.callback_query(FaqCb.filter())
@@ -279,7 +311,7 @@ async def feedback_finish(callback: CallbackQuery, callback_data: CallbackData):
         text = user.get_text()
         for_translate = text.replace(' ', '%20')
         dorm_id = user.get_dorm_number()
-        data = requests.get(TRANSLATE_LINK_EN_RU+for_translate).json()
+        data = requests.get(TRANSLATE_LINK_EN_RU + for_translate).json()
         ru_text = data['destination-text']
         if data['source-language'] == 'en':
             text_lang = ENG
@@ -287,9 +319,11 @@ async def feedback_finish(callback: CallbackQuery, callback_data: CallbackData):
         else:
             text_lang = RUS
             await asyncio.sleep(0.2)
-            en_text = requests.get(TRANSLATE_LINK_RU_EN+for_translate).json()['destination-text']
+            en_text = requests.get(TRANSLATE_LINK_RU_EN + for_translate).json()['destination-text']
 
-        cursor.execute(CREATE_FEEDBACK, (dorm_id, ru_text, rates[RATE_AVG], text_lang, en_text, rates[RATE_STAFF], rates[RATE_PRIVATE], rates[RATE_INFRASTRUCTURE], rates[RATE_PUBLIC], rates[RATE_TRANSPORT], 0, user.is_verified(), user.id))
+        cursor.execute(CREATE_FEEDBACK, (
+            dorm_id, ru_text, rates[RATE_AVG], text_lang, en_text, rates[RATE_STAFF], rates[RATE_PRIVATE],
+            rates[RATE_INFRASTRUCTURE], rates[RATE_PUBLIC], rates[RATE_TRANSPORT], 0, user.is_verified(), user.id))
         await callback.message.edit_text(text=texts['feedback_confirmed'][language])
         user.set_state(DEFAULT_STATE)
 
@@ -347,6 +381,7 @@ async def main():
     load_dorms()
     load_feedbacks()
     load_users()
+    load_token()
     await dp.start_polling(bot)
 
 

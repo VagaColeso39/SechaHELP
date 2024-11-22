@@ -8,10 +8,6 @@ questions = {}
 users = Users()
 dorms = {}
 
-conn = sqlite3.connect('main.db')
-conn.isolation_level = None
-cursor = sqlite3.Cursor(conn)
-
 
 def load_token():
     global TOKEN, bot
@@ -45,13 +41,12 @@ def load_dorms():
 
 feedbacks_by_time = {}
 feedbacks_by_rate = {}
-reviews = []
 res = []
 
 
 def load_feedbacks():
     global res, feedbacks_by_rate, feedbacks_by_time
-    for review in cursor.execute(GET_FEEDBACK).fetchall():
+    for review in cursor.execute(GET_FEEDBACKS).fetchall():
         feedbacks_by_time[review[0]] = Feedback(*review)
     feedbacks_by_rate = list(feedbacks_by_time.values())
     feedbacks_by_rate.sort(key=lambda feedback: feedback.grade_avg)
@@ -328,6 +323,30 @@ async def feedback_finish(callback: CallbackQuery, callback_data: CallbackData):
         user.set_state(DEFAULT_STATE)
 
 
+@dp.callback_query(AskAuthorCb.filter())
+async def ask_author_finish(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    user = users.get_user(tg_id)
+    language = user.get_language()
+    command = callback_data.command
+    review_id = user.get_feedback_number()
+    author_id = cursor.execute(AUTHOR_ID_BY_ID, (review_id, )).fetchone()
+    author = users.get_user(author_id)
+    author_language = author.get_language()
+    author.add_request(tg_id, review_id)
+    ask_notification_generator
+    await bot.send_message(author_id, texts['ask_notification'][language], reply_markup=keyboards['ask_notification'][language])
+    if command == 'cancel':
+        user.set_state(DEFAULT_STATE)
+        await callback.message.answer(texts['start'][language], reply_markup=keyboards['start'][language])
+    elif command == 'text':
+        await callback.message.answer(texts['ask_author'][language])
+    elif command == 'public':
+        pass
+    elif command == 'anonim':
+        pass
+
+
 @dp.message(lambda message: not users.check_existence(message.chat.id))
 async def new_user(message: Message):
     tg_id = message.chat.id
@@ -335,6 +354,16 @@ async def new_user(message: Message):
     users.add_user(user)
     cursor.execute(CREATE_USER, (tg_id, RUS))
     await send_message(message, 'language_choose', RUS)
+
+
+@dp.message(lambda message: users.get_user(message.chat.id).get_state() == AUTHOR_ASK_STATE)
+async def ask_author(message:Message):
+    user = users.get_user(message.chat.id)
+    language = user.get_language()
+    question_text = message.text
+    user.set_text(question_text)
+    kb = keyboards['ask_author_sending'][language]
+    await message.answer(texts['ask_author_sending'][language].format(question_text=question_text), reply_markup=kb)
 
 
 @dp.message(lambda message: users.get_user(message.chat.id).get_state() == FEEDBACK_WRITING_STATE)

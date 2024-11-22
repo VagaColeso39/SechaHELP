@@ -499,7 +499,7 @@
     <routine id="190" parent="1" name="fts5"/>
     <schema id="191" parent="1" name="main">
       <Current>1</Current>
-      <LastIntrospectionLocalTimestamp>2024-11-07.16:49:11</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2024-11-21.19:21:45</LastIntrospectionLocalTimestamp>
     </schema>
     <argument id="192" parent="16">
       <ArgumentDirection>R</ArgumentDirection>
@@ -1593,134 +1593,155 @@
     <table id="555" parent="191" name="dorms"/>
     <table id="556" parent="191" name="feedbacks"/>
     <table id="557" parent="191" name="questions"/>
-    <table id="558" parent="191" name="sqlite_master">
+    <table id="558" parent="191" name="requests"/>
+    <table id="559" parent="191" name="sqlite_master">
       <System>1</System>
     </table>
-    <table id="559" parent="191" name="users"/>
-    <column id="560" parent="555" name="ru_name">
+    <table id="560" parent="191" name="users"/>
+    <column id="561" parent="555" name="ru_name">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="561" parent="555" name="eng_name">
+    <column id="562" parent="555" name="eng_name">
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="562" parent="555" name="ru_description">
+    <column id="563" parent="555" name="ru_description">
       <Position>3</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="563" parent="555" name="en_description">
+    <column id="564" parent="555" name="en_description">
       <Position>4</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="564" parent="556" name="id_dorm">
+    <column id="565" parent="556" name="id_dorm">
       <Position>1</Position>
       <StoredType>INTEGER|0s</StoredType>
     </column>
-    <column id="565" parent="556" name="ru_text">
+    <column id="566" parent="556" name="ru_text">
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="566" parent="556" name="grade_avg">
+    <column id="567" parent="556" name="grade_avg">
       <Position>3</Position>
       <StoredType>INTEGER|0s</StoredType>
     </column>
-    <column id="567" parent="556" name="language">
+    <column id="568" parent="556" name="language">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="568" parent="556" name="en_text">
+    <column id="569" parent="556" name="en_text">
       <Position>5</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="569" parent="556" name="grade_staff">
+    <column id="570" parent="556" name="grade_staff">
       <Position>6</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="570" parent="556" name="grade_private">
+    <column id="571" parent="556" name="grade_private">
       <Position>7</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="571" parent="556" name="grade_infrastructure">
+    <column id="572" parent="556" name="grade_infrastructure">
       <Position>8</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="572" parent="556" name="grade_public">
+    <column id="573" parent="556" name="grade_public">
       <Position>9</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="573" parent="556" name="grade_transport">
+    <column id="574" parent="556" name="grade_transport">
       <Position>10</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="574" parent="556" name="accepted">
+    <column id="575" parent="556" name="accepted">
       <Position>11</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="575" parent="556" name="creator_id">
+    <column id="576" parent="556" name="creator_id">
       <Position>12</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="576" parent="556" name="verified">
+    <column id="577" parent="556" name="verified">
       <Position>13</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="577" parent="557" name="ru_text">
+    <column id="578" parent="557" name="ru_text">
       <Position>1</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="578" parent="557" name="ru_answer">
+    <column id="579" parent="557" name="ru_answer">
       <Position>2</Position>
       <StoredType>text|0s</StoredType>
     </column>
-    <column id="579" parent="557" name="en_text">
+    <column id="580" parent="557" name="en_text">
       <Position>3</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="580" parent="557" name="en_answer">
+    <column id="581" parent="557" name="en_answer">
       <Position>4</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="581" parent="558" name="type">
+    <column id="582" parent="558" name="requester_id">
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+      <StoredType>integer|0s</StoredType>
+    </column>
+    <column id="583" parent="558" name="feedback_id">
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+      <StoredType>integer|0s</StoredType>
+    </column>
+    <column id="584" parent="558" name="author_id">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>integer|0s</StoredType>
+    </column>
+    <column id="585" parent="558" name="request_text">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>TEXT|0s</StoredType>
+    </column>
+    <column id="586" parent="559" name="type">
       <Position>1</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="582" parent="558" name="name">
+    <column id="587" parent="559" name="name">
       <Position>2</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="583" parent="558" name="tbl_name">
+    <column id="588" parent="559" name="tbl_name">
       <Position>3</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="584" parent="558" name="rootpage">
+    <column id="589" parent="559" name="rootpage">
       <Position>4</Position>
       <StoredType>INT|0s</StoredType>
     </column>
-    <column id="585" parent="558" name="sql">
+    <column id="590" parent="559" name="sql">
       <Position>5</Position>
       <StoredType>TEXT|0s</StoredType>
     </column>
-    <column id="586" parent="559" name="tg_id">
+    <column id="591" parent="560" name="tg_id">
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="587" parent="559" name="language">
+    <column id="592" parent="560" name="language">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <column id="588" parent="559" name="verified">
+    <column id="593" parent="560" name="verified">
       <DefaultExpression>0</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>integer|0s</StoredType>
     </column>
-    <key id="589" parent="559" name="users_pk">
+    <key id="594" parent="560" name="users_pk">
       <ColNames>tg_id</ColNames>
       <Primary>1</Primary>
     </key>

@@ -7,16 +7,24 @@ import requests
 import sqlite3
 import asyncio
 
+conn = sqlite3.connect('main.db')
+conn.isolation_level = None
+cursor = sqlite3.Cursor(conn)
+
 TRANSLATE_LINK_RU_EN = 'https://ftapi.pythonanywhere.com/translate?&dl=en&text='
 TRANSLATE_LINK_EN_RU = 'https://ftapi.pythonanywhere.com/translate?&dl=ru&text='
 
 GET_QUESTIONS = 'SELECT ROWID, ru_text, en_text, ru_answer, en_answer FROM questions'
 GET_USERS = "SELECT tg_id, language, verified FROM users"
 GET_DORMS = 'SELECT ROWID, ru_name, eng_name, ru_description, en_description FROM dorms'
-GET_FEEDBACK = 'SELECT ROWID, id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id FROM feedbacks'
+GET_REQUESTS = "SELECT requester_id, feedback_id FROM requests WHERE author_id=?"
+GET_FEEDBACKS = 'SELECT ROWID, id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id FROM feedbacks'
+AUTHOR_ID_BY_ID = "SELECT ROWID FROM feedbacks WHERE creator_id=?"
 CREATE_FEEDBACK = 'INSERT INTO feedbacks (id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 CREATE_USER = "INSERT INTO users (tg_id, language) VALUES (?, ?)"
+CREATE_REQUEST = "INSERT INTO requests (requester_id, feedback_id, author_id) VALUES (?, ?, ?)"
 UPDATE_LANGUAGE = "UPDATE users SET language=? WHERE tg_id=?"
+
 DEFAULT_STATE = 0
 SEARCH_STATE = 1
 INTERACTION_STATE = 2
@@ -74,6 +82,10 @@ class FeedbackFinishCb(CallbackData, prefix='fbFinishCb'):
     command: str
 
 
+class AskAuthorCb(CallbackData, prefix='askAuthorCb'):
+    command: str
+
+
 texts = {
     'new_user': {RUS: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot",
                  ENG: "Мы рады видеть вас в нашем боте / We are grateful to see you in our bot"},
@@ -124,20 +136,22 @@ texts = {
     'feedback_confirmed': {
         RUS: "Ваш отзыв отправлен на модерацию,в течение 1-3 рабочих дней ожидайте сообщение от этого бота с дальнейшей информацией по отзыву",
         ENG: "Your feedback have been sent to moderation, wait for the message with additional information from this bot in 1-3 business days"},
-    'dorm_reviews': {RUS: '◆ Транспортная доступность: {transport}/10\n◆ Персонал: {staff}/10\n◆ Личные комнаты: {private}/10\n◆ Общие зоны: {public}/10\n◆ Инфраструктура: {infrastructure}/10\n◆ Среднее: {average}/10\n\n{review}',
-                     ENG: '◆ Transport accessibility: {transport}/10\n◆ Staff: {staff}/10\n◆ Private rooms: {private}/10\n◆ Public rooms: {public}/10\n◆ Infrastructure: {infrastructure}/10\n◆ Average: {average}/10\n\n{review}'},
+    'dorm_reviews': {
+        RUS: '◆ Транспортная доступность: {transport}/10\n◆ Персонал: {staff}/10\n◆ Личные комнаты: {private}/10\n◆ Общие зоны: {public}/10\n◆ Инфраструктура: {infrastructure}/10\n◆ Среднее: {average}/10\n\n{review}',
+        ENG: '◆ Transport accessibility: {transport}/10\n◆ Staff: {staff}/10\n◆ Private rooms: {private}/10\n◆ Public rooms: {public}/10\n◆ Infrastructure: {infrastructure}/10\n◆ Average: {average}/10\n\n{review}'},
 
     'ask_author': {RUS: 'Напишите вопрос автору отзыва, после модерации текста он получит возможность ответить вам',
                    ENG: "Write question to the feedback author, after text moderation he will be able to answer you"}
 }
 
-
 keyboards = {
     'start': {
-        RUS: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
-                                 resize_keyboard=True),
-        ENG: ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
-                                 resize_keyboard=True)},
+        RUS: ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
+            resize_keyboard=True),
+        ENG: ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text='/dorms'), KeyboardButton(text='/faq'), KeyboardButton(text='/language')]],
+            resize_keyboard=True)},
     'language_choose': {
         RUS: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='Русский', callback_data=LangCb(value=RUS).pack()),
@@ -168,13 +182,12 @@ keyboards = {
         RUS: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='отзывы на общежитие', callback_data=DormInfoCb(command="review").pack()),
              InlineKeyboardButton(text='оставить отзыв', callback_data=DormInfoCb(command="send_review").pack()),
-             InlineKeyboardButton(text='⬅️', callback_data=DormInfoCb(command="back").pack())]
-        ]),
+             InlineKeyboardButton(text='⬅️', callback_data=DormInfoCb(command="back").pack())]]),
+
         ENG: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='dorm reviews', callback_data=DormInfoCb(command="review").pack()),
              InlineKeyboardButton(text='leave review', callback_data=DormInfoCb(command="send_review").pack()),
-             InlineKeyboardButton(text='⬅️', callback_data=DormInfoCb(command="back").pack())]
-        ])
+             InlineKeyboardButton(text='⬅️', callback_data=DormInfoCb(command="back").pack())]])
     },
 
     'dorm_reviews_sort': {
@@ -185,15 +198,14 @@ keyboards = {
                                   callback_data=ReviewsSortCb(command="positive").pack())],
             [InlineKeyboardButton(text='сначала отрицательные',
                                   callback_data=ReviewsSortCb(command="negative").pack())],
-            [InlineKeyboardButton(text='⬅️', callback_data=ReviewsSortCb(command="back").pack())]
-        ]),
+            [InlineKeyboardButton(text='⬅️', callback_data=ReviewsSortCb(command="back").pack())]]),
+
         ENG: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='new ones first', callback_data=ReviewsSortCb(command="new").pack())],
             [InlineKeyboardButton(text='old ones first', callback_data=ReviewsSortCb(command="old").pack())],
             [InlineKeyboardButton(text='positive ones first', callback_data=ReviewsSortCb(command="positive").pack())],
             [InlineKeyboardButton(text='negative ones first', callback_data=ReviewsSortCb(command="negative").pack())],
-            [InlineKeyboardButton(text='⬅️', callback_data=ReviewsSortCb(command="back").pack())]
-        ])
+            [InlineKeyboardButton(text='⬅️', callback_data=ReviewsSortCb(command="back").pack())]])
     },
 
     'dorm_reviews': {
@@ -201,14 +213,13 @@ keyboards = {
             [InlineKeyboardButton(text='следующий отзыв', callback_data=ReviewsCb(command="next").pack()),
              InlineKeyboardButton(text='предыдущий отзыв', callback_data=ReviewsCb(command="last").pack()),
              InlineKeyboardButton(text='обратная связь', callback_data=ReviewsCb(command='ask').pack()),
-             InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]
-        ]),
+             InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]]),
+
         ENG: InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='next review', callback_data=ReviewsCb(command="next").pack()),
              InlineKeyboardButton(text='previous review', callback_data=ReviewsCb(command="last").pack()),
              InlineKeyboardButton(text='contact author', callback_data=ReviewsCb(command='ask').pack()),
-             InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]
-        ])
+             InlineKeyboardButton(text='⬅️', callback_data=ReviewsCb(command="back").pack())]])
     },
     'confirm_feedback': {
         RUS: InlineKeyboardMarkup(inline_keyboard=[
@@ -216,14 +227,36 @@ keyboards = {
                                   callback_data=FeedbackFinishCb(command="confirm").pack()),
              InlineKeyboardButton(text='Изменить оценки', callback_data=FeedbackFinishCb(command="rate").pack()),
              InlineKeyboardButton(text='Изменить текст', callback_data=FeedbackFinishCb(command="text").pack()),
-             InlineKeyboardButton(text='Отменить отправку', callback_data=FeedbackFinishCb(command="cancel").pack())]])
+             InlineKeyboardButton(text='Отменить отправку', callback_data=FeedbackFinishCb(command="cancel").pack())]]),
+
+        ENG: InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='Confirm sending', callback_data=FeedbackFinishCb(command="confirm").pack()),
+             InlineKeyboardButton(text='Change rates', callback_data=FeedbackFinishCb(command="rate").pack()),
+             InlineKeyboardButton(text='Change text', callback_data=FeedbackFinishCb(command="text").pack()),
+             InlineKeyboardButton(text='Cancel sending', callback_data=FeedbackFinishCb(command="cancel").pack())]])
+
+    },
+    'ask_author_sending': {
+        RUS: InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='Прикрепить свой ник', callback_data=AskAuthorCb(command="public").pack()),
+             InlineKeyboardButton(text='Отправить анонимно', callback_data=AskAuthorCb(command="anonim").pack()),
+             InlineKeyboardButton(text='Изменить текст', callback_data=AskAuthorCb(command="text").pack()),
+             InlineKeyboardButton(text='Отменить отправку', callback_data=AskAuthorCb(command="cancel").pack())]]),
+        ENG: InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='Send with your nickname', callback_data=AskAuthorCb(command="public").pack()),
+             InlineKeyboardButton(text='Send anonymously', callback_data=AskAuthorCb(command="anonim").pack()),
+             InlineKeyboardButton(text='Change text', callback_data=AskAuthorCb(command="text").pack()),
+             InlineKeyboardButton(text='Cancel sending', callback_data=AskAuthorCb(command="cancel").pack())]]),
+
     }
 }
 
 
 class User:
-    def __init__(self, tg_id: int, language: int = RUS, verified:bool=False, state: int = DEFAULT_STATE, feedback_number:
-    int = DEFAULT_NUMBER_FEEDBACK, type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT, selected_dorm: int = 1):
+    def __init__(self, tg_id: int, language: int = RUS, verified: bool = False, state: int = DEFAULT_STATE,
+                 feedback_number: int = DEFAULT_NUMBER_FEEDBACK,
+                 type_sort_feedback: int = FEEDBACK_SORT_TIME_RIGHT,
+                 selected_dorm: int = 1):
         self.id = tg_id
         self.__state = state
         self.__language = language
@@ -231,8 +264,9 @@ class User:
         self.__type_sort_feedback = type_sort_feedback
         self.__selected_dorm = selected_dorm
         self.__tmp_dorm_rate = {}
-        self.__feedback_text = ''
+        self.__text = ''
         self.__verified = verified
+        self.__requests = list(cursor.execute(GET_REQUESTS, (self.id,)).fetchall())
 
     def is_verified(self):
         return self.__verified
@@ -241,6 +275,13 @@ class User:
         if self.__verified:
             raise AlreadyVerified
         self.__verified = True
+
+    def add_request(self, requester_id, feedback_id):
+        self.__requests.append((requester_id, feedback_id))
+        cursor.execute(CREATE_REQUEST, (requester_id, feedback_id, self.id))
+
+    def get_requests(self):
+        return self.__requests
 
     def set_rate(self, rate: float, param: int):
         self.__tmp_dorm_rate[param] = rate
@@ -255,10 +296,10 @@ class User:
         return self.__state
 
     def set_text(self, text: str):
-        self.__feedback_text = text
+        self.__text = text
 
     def get_text(self):
-        return self.__feedback_text
+        return self.__text
 
     def get_feedback_number(self):
         return self.__feedback_number
@@ -325,7 +366,8 @@ class Dorm:
 
 
 class Feedback:
-    def __init__(self, feedback_id, id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private, grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id):
+    def __init__(self, feedback_id, id_dorm, ru_text, grade_avg, language, en_text, grade_staff, grade_private,
+                 grade_infrastructure, grade_public, grade_transport, accepted, verified, creator_id):
         self.id = feedback_id
         self.id_dorm = id_dorm
         self.ru_text = ru_text
@@ -350,6 +392,9 @@ async def faq_kb_gen(length: int, go_back: bool = False):
         kb.button(text='⬅️', callback_data=FaqCb(num_button=-1))
     kb.adjust(*(4, 4, 4))
     return kb.as_markup()
+
+
+async def notification_kb_gen()
 
 
 async def feedback_write_kb_gen(current_param: int):

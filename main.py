@@ -46,8 +46,8 @@ res = []
 
 def load_feedbacks():
     global res, feedbacks_by_rate, feedbacks_by_time
-    for review in cursor.execute(GET_FEEDBACKS).fetchall():
-        feedbacks_by_time[review[0]] = Feedback(*review)
+    for feedback in cursor.execute(GET_FEEDBACKS).fetchall():
+        feedbacks_by_time[feedback[0]] = Feedback(*feedback)
     feedbacks_by_rate = list(feedbacks_by_time.values())
     feedbacks_by_rate.sort(key=lambda feedback: feedback.grade_avg)
     feedbacks_by_rate = dict(zip(range(1, len(feedbacks_by_rate) + 1), feedbacks_by_rate))
@@ -98,11 +98,11 @@ async def choose_dorm_command(callback: CallbackQuery, callback_data: CallbackDa
     command = callback_data.command
     language = users.get_user(tg_id).get_language()
 
-    if command == "review":
-        kb = keyboards['dorm_reviews_sort'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
+    if command == "feedback":
+        kb = keyboards['dorm_feedbacks_sort'][language]
+        await callback.message.edit_text(text=texts['dorm_feedbacks_sort'][language], reply_markup=kb)
 
-    if command == "send_review":
+    if command == "send_feedback":
         await callback.message.edit_text(text=texts['sent_feedback'][language])
         kb = await feedback_write_kb_gen(RATE_TRANSPORT)
         await callback.message.answer(text=texts[RATE_TRANSPORT][language], reply_markup=kb)
@@ -134,14 +134,14 @@ async def rate_filter(callback: CallbackQuery, callback_data: CallbackData):
         user.set_state(FEEDBACK_WRITING_STATE)
 
 
-@dp.callback_query(ReviewsSortCb.filter())
+@dp.callback_query(FeedbacksSortCb.filter())
 async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
     tg_id = callback.message.chat.id
     command = callback_data.command
     language = users.get_user(tg_id).get_language()
     dorm_number = users.get_user(tg_id).get_dorm_number()
     user = users.get_user(tg_id)
-    kb = keyboards['dorm_reviews'][language]
+    kb = keyboards['dorm_feedbacks'][language]
     feedback_number = -1
     sorter_parameter = -1
 
@@ -166,7 +166,7 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
     if language == RUS:
         if language != feedback.language:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.ru_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
@@ -174,7 +174,7 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
                 reply_markup=kb)
         else:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.ru_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
@@ -182,7 +182,7 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
     else:
         if language != feedback.language:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.en_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
@@ -190,7 +190,7 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
                 reply_markup=kb)
         else:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.en_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
@@ -204,8 +204,8 @@ async def change_filter(callback: CallbackQuery, callback_data: CallbackData):
             await callback.message.edit_text(text=dorms[dorm_number].en_description, reply_markup=kb)
 
 
-@dp.callback_query(ReviewsCb.filter())
-async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData):
+@dp.callback_query(FeedbacksCb.filter())
+async def scrolling_feedbacks(callback: CallbackQuery, callback_data: CallbackData):
     tg_id = callback.message.chat.id
     command = callback_data.command
     language = users.get_user(tg_id).get_language()
@@ -244,29 +244,32 @@ async def scrolling_reviews(callback: CallbackQuery, callback_data: CallbackData
         feedback = res[sorter_parameter - 2][feedback_number]
 
     user.set_feedback_number(feedback_number)
-    kb = keyboards['dorm_reviews'][language]
+    kb = keyboards['dorm_feedbacks'][language]
 
     if command in ('last', 'next'):
         if language == RUS:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.ru_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.ru_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
                                                             average=feedback.grade_avg), reply_markup=kb)
         else:
             await callback.message.edit_text(
-                text=texts['dorm_reviews'][language].format(review=feedback.en_text, transport=feedback.grade_transport,
+                text=texts['dorm_feedbacks'][language].format(feedback=feedback.en_text, transport=feedback.grade_transport,
                                                             staff=feedback.grade_staff, private=feedback.grade_private,
                                                             public=feedback.grade_public,
                                                             infrastructure=feedback.grade_infrastructure,
                                                             average=feedback.grade_avg), reply_markup=kb)
     elif command == "back":
-        kb = keyboards['dorm_reviews_sort'][language]
-        await callback.message.edit_text(text=texts['dorm_reviews_sort'][language], reply_markup=kb)
+        kb = keyboards['dorm_feedbacks_sort'][language]
+        await callback.message.edit_text(text=texts['dorm_feedbacks_sort'][language], reply_markup=kb)
     elif command == 'ask':
-        await callback.message.edit_text(text=texts['ask_author'][language])
-        user.set_state(AUTHOR_ASK_STATE)
+        if cursor.execute(GET_REQUEST_ID, (user.id, feedback.id)).fetchone() and not cursor.execute(CHECK_REQUEST_COMPLETED, (user.id,  feedback.id)).fetchone()[0]:
+            await callback.message.edit_text(text=texts['already_asked'][language])
+        else:
+            await callback.message.edit_text(text=texts['ask_author'][language])
+            user.set_state(AUTHOR_ASK_STATE)
 
 
 @dp.callback_query(FaqCb.filter())
@@ -329,22 +332,43 @@ async def ask_author_finish(callback: CallbackQuery, callback_data: CallbackData
     user = users.get_user(tg_id)
     language = user.get_language()
     command = callback_data.command
-    review_id = user.get_feedback_number()
-    author_id = cursor.execute(AUTHOR_ID_BY_ID, (review_id, )).fetchone()
+    feedback_id = user.get_feedback_number()
+    author_id = cursor.execute(AUTHOR_ID_BY_ID, (feedback_id, )).fetchone()[0]
     author = users.get_user(author_id)
     author_language = author.get_language()
-    author.add_request(tg_id, review_id)
-    ask_notification_generator
-    await bot.send_message(author_id, texts['ask_notification'][language], reply_markup=keyboards['ask_notification'][language])
+
     if command == 'cancel':
         user.set_state(DEFAULT_STATE)
         await callback.message.answer(texts['start'][language], reply_markup=keyboards['start'][language])
     elif command == 'text':
         await callback.message.answer(texts['ask_author'][language])
     elif command == 'public':
-        pass
-    elif command == 'anonim':
-        pass
+        request_id = author.add_request(tg_id, feedback_id, user.get_text())
+        username = callback.message.chat.username
+        kb = await notification_kb_gen(author_language, request_id)
+        await bot.send_message(author_id, texts['ask_notification_public'][author_language].format(text=user.get_text(), username=username), reply_markup=kb)
+    elif command == 'anonym':
+        request_id = author.add_request(tg_id, feedback_id, user.get_text())
+        kb = await notification_kb_gen(author_language, request_id)
+        await bot.send_message(author_id, texts['ask_notification_private'][author_language].format(text=user.get_text()), reply_markup=kb)
+
+
+@dp.callback_query(NotifyCb.filter())
+async def notification_handler(callback: CallbackQuery, callback_data: CallbackData):
+    tg_id = callback.message.chat.id
+    user = users.get_user(tg_id)
+    language = user.get_language()
+    action = callback_data.action
+    request_id = callback_data.request_id
+    if action == "Delete":
+        await callback.message.delete()
+    elif action == "Report":
+        cursor.execute(MARK_REQUEST, (request_id, ))
+        await callback.message.answer(texts['request_reported'][language])
+    elif action == "Reply":
+        user.set_state(REQUEST_REPLY_STATE)
+        await callback.message.answer(texts['answering_request'][language])
+        user.set_reply_request(request_id)
 
 
 @dp.message(lambda message: not users.check_existence(message.chat.id))
@@ -356,6 +380,21 @@ async def new_user(message: Message):
     await send_message(message, 'language_choose', RUS)
 
 
+@dp.message(lambda message: users.get_user(message.chat.id).get_state() == REQUEST_REPLY_STATE)
+async def reply_request(message:Message):
+    user = users.get_user(message.chat.id)
+    language = user.get_language()
+    answer_text = message.text
+    request_id = user.get_reply_request()
+    requester_id = cursor.execute(GET_REQUESTER_ID, (request_id,)).fetchone()[0]
+    requester_language = users.get_user(requester_id).get_language()
+    kb = await reply_kb_gen(requester_language, request_id)
+    await bot.send_message(requester_id, texts['question_reply'][requester_language].format(text=answer_text), reply_markup=kb)
+    await message.answer(texts['question_replied'][language])
+    cursor.execute(COMPLETE_REQUEST, (request_id,))
+    user.set_state(DEFAULT_STATE)
+
+
 @dp.message(lambda message: users.get_user(message.chat.id).get_state() == AUTHOR_ASK_STATE)
 async def ask_author(message:Message):
     user = users.get_user(message.chat.id)
@@ -364,6 +403,7 @@ async def ask_author(message:Message):
     user.set_text(question_text)
     kb = keyboards['ask_author_sending'][language]
     await message.answer(texts['ask_author_sending'][language].format(question_text=question_text), reply_markup=kb)
+    user.set_state(DEFAULT_STATE)
 
 
 @dp.message(lambda message: users.get_user(message.chat.id).get_state() == FEEDBACK_WRITING_STATE)
